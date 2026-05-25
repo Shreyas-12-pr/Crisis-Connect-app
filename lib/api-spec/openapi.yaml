@@ -1,0 +1,328 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: CrisisConnect API — hospitality emergency response coordination
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: alerts
+    description: Emergency alert operations
+  - name: requests
+    description: Service & staff request operations
+  - name: chat
+    description: Concierge chat
+  - name: evacuation
+    description: Safe-exit guidance
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /alerts:
+    get:
+      operationId: listAlerts
+      tags: [alerts]
+      summary: List all alerts
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/EmergencyType"
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/AlertStatus"
+      responses:
+        "200":
+          description: List of alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Alert"
+    post:
+      operationId: createAlert
+      tags: [alerts]
+      summary: Create a new emergency alert
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAlertInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Alert"
+  /alerts/{id}:
+    put:
+      operationId: updateAlertStatus
+      tags: [alerts]
+      summary: Update an alert's status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAlertInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Alert"
+  /requests:
+    get:
+      operationId: listRequests
+      tags: [requests]
+      summary: List service / staff requests
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceRequest"
+    post:
+      operationId: createRequest
+      tags: [requests]
+      summary: Create a staff or service request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRequestInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRequest"
+  /requests/{id}/resolve:
+    post:
+      operationId: resolveRequest
+      tags: [requests]
+      summary: Mark a request as resolved
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRequest"
+  /chat:
+    post:
+      operationId: postChat
+      tags: [chat]
+      summary: Send a concierge chat message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatInput"
+      responses:
+        "200":
+          description: Reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatReply"
+  /evacuation:
+    get:
+      operationId: getEvacuation
+      tags: [evacuation]
+      summary: Safe-exit instructions
+      responses:
+        "200":
+          description: Instructions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvacuationInstructions"
+  /alerts/stats:
+    get:
+      operationId: getAlertStats
+      tags: [alerts]
+      summary: Get aggregated alert statistics
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertStats"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+    EmergencyType:
+      type: string
+      enum: [fire, medical, security, other]
+    AlertStatus:
+      type: string
+      enum: [pending, in_progress, resolved]
+    Alert:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        location:
+          type: string
+        type:
+          $ref: "#/components/schemas/EmergencyType"
+        description:
+          type: string
+        status:
+          $ref: "#/components/schemas/AlertStatus"
+        timestamp:
+          type: string
+          format: date-time
+        reportedBy:
+          type: string
+          enum: [guest, staff, admin]
+      required: [id, name, location, type, description, status, timestamp, reportedBy]
+    CreateAlertInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        location:
+          type: string
+          minLength: 1
+        type:
+          $ref: "#/components/schemas/EmergencyType"
+        description:
+          type: string
+        reportedBy:
+          type: string
+          enum: [guest, staff, admin]
+      required: [name, location, type, description, reportedBy]
+    UpdateAlertInput:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/AlertStatus"
+      required: [status]
+    RequestType:
+      type: string
+      enum: [staff, service]
+    ServiceRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          $ref: "#/components/schemas/RequestType"
+        location:
+          type: string
+        message:
+          type: string
+        status:
+          type: string
+          enum: [pending, resolved]
+        timestamp:
+          type: string
+          format: date-time
+      required: [id, type, location, message, status, timestamp]
+    CreateRequestInput:
+      type: object
+      properties:
+        type:
+          $ref: "#/components/schemas/RequestType"
+        location:
+          type: string
+          minLength: 1
+        message:
+          type: string
+      required: [type, location, message]
+    ChatInput:
+      type: object
+      properties:
+        message:
+          type: string
+          minLength: 1
+      required: [message]
+    ChatReply:
+      type: object
+      properties:
+        reply:
+          type: string
+      required: [reply]
+    EvacuationInstructions:
+      type: object
+      properties:
+        instructions:
+          type: array
+          items:
+            type: string
+      required: [instructions]
+    AlertStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        active:
+          type: integer
+        pending:
+          type: integer
+        inProgress:
+          type: integer
+        resolved:
+          type: integer
+        byType:
+          type: object
+          properties:
+            fire:
+              type: integer
+            medical:
+              type: integer
+            security:
+              type: integer
+            other:
+              type: integer
+          required: [fire, medical, security, other]
+      required: [total, active, pending, inProgress, resolved, byType]
